@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QArt — Générateur de QR Code vectoriel</title>
+<meta name="description" content="Générateur de QR Code entièrement local : contrôle de la redondance, personnalisation des formes et des couleurs, logo, export SVG et PNG pour Illustrator et InDesign.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/app.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000'/%3E%3Cpath d='M6 6h8v8H6zm2 2v4h4V8zM18 6h8v8h-8zm2 2v4h4V8zM6 18h8v8H6zm2 2v4h4v-4zM18 18h3v3h-3zm5 0h3v3h-3zm-5 5h3v3h-3zm5 0h3v3h-3z' fill='%23fff'/%3E%3C/svg%3E">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m20 6-11 11-5-5"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4m0 4h.01"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4m0-4h.01"/></symbol>
+  <symbol id="i-ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-reset" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></symbol>
+</defs></svg>
+
+<header class="nav">
+  <div class="nav__inner">
+    <div class="nav__brand">
+      <svg class="nav__mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 4h9v9H4zm2 2v5h5V6zM19 4h9v9h-9zm2 2v5h5V6zM4 19h9v9H4zm2 2v5h5v-5zM19 19h3.5v3.5H19zm5.5 0H28v3.5h-3.5zM19 24.5h3.5V28H19zm5.5 0H28V28h-3.5z"/></svg>
+      <div class="nav__names">
+        <p class="nav__title">QArt</p>
+        <p class="nav__sub">Générateur de QR Code vectoriel</p>
+      </div>
+    </div>
+    <button id="theme-toggle" class="btn btn--secondary btn--icon" type="button" aria-label="Basculer entre thème clair et sombre">
+      <svg class="icon icon--sun" aria-hidden="true"><use href="#i-sun"/></svg>
+      <svg class="icon icon--moon" aria-hidden="true"><use href="#i-moon"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="layout">
+
+  <!-- ============ Colonne de réglages ============ -->
+  <section class="controls" aria-label="Réglages">
+    <div class="tab-bar" role="tablist">
+      <button class="tab-btn is-active" role="tab" aria-selected="true" aria-controls="tab-contenu" id="t-contenu" type="button">Contenu</button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-apparence" id="t-apparence" type="button">Apparence</button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-logo" id="t-logo" type="button">Logo</button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-export" id="t-export" type="button">Export</button>
+    </div>
+
+    <!-- ---- Contenu ---- -->
+    <div class="tab-panel" id="tab-contenu" role="tabpanel" aria-labelledby="t-contenu">
+      <div class="card">
+        <div class="field">
+          <label class="field__label" for="content">Contenu encodé</label>
+          <textarea class="field__input field__input--area" id="content" rows="3" spellcheck="false">https://exemple.fr/campagne-automne</textarea>
+          <p class="field__hint"><span id="byte-count">0</span> caractères · <span id="mode-summary">—</span></p>
+          <p class="field__error" id="content-error" hidden></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card__label">Redondance</p>
+        <div class="field">
+          <span class="field__label" id="ecc-label">Niveau de correction d'erreur</span>
+          <div class="seg" role="radiogroup" aria-labelledby="ecc-label" id="ecc-group">
+            <button class="seg__btn" role="radio" type="button" data-value="L" aria-checked="false"><b>L</b><small>7 %</small></button>
+            <button class="seg__btn is-active" role="radio" type="button" data-value="M" aria-checked="true"><b>M</b><small>15 %</small></button>
+            <button class="seg__btn" role="radio" type="button" data-value="Q" aria-checked="false"><b>Q</b><small>25 %</small></button>
+            <button class="seg__btn" role="radio" type="button" data-value="H" aria-checked="false"><b>H</b><small>30 %</small></button>
+          </div>
+          <p class="field__hint" id="ecc-hint">Part du symbole restituable après dégradation. H est requis dès qu'un logo masque le centre.</p>
+        </div>
+
+        <label class="switch">
+          <input type="checkbox" id="boost-ecl" checked>
+          <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+          <span class="switch__text">
+            Élever le niveau si la place le permet
+            <small>Monte automatiquement vers Q ou H tant que la version du symbole reste identique.</small>
+          </span>
+        </label>
+      </div>
+
+      <div class="card">
+        <p class="card__label">Structure du symbole</p>
+        <div class="grid-2">
+          <div class="field">
+            <label class="field__label" for="min-version">Version minimale</label>
+            <select class="field__input" id="min-version"></select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="mask">Masque</label>
+            <select class="field__input" id="mask">
+              <option value="-1">Automatique</option>
+              <option value="0">Masque 0</option><option value="1">Masque 1</option>
+              <option value="2">Masque 2</option><option value="3">Masque 3</option>
+              <option value="4">Masque 4</option><option value="5">Masque 5</option>
+              <option value="6">Masque 6</option><option value="7">Masque 7</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="quiet">Zone de silence — <span class="value" id="quiet-val">4</span> modules</label>
+          <input class="range" type="range" id="quiet" min="0" max="8" step="1" value="4">
+          <p class="field__hint">La norme ISO/IEC 18004 impose 4 modules de marge claire autour du symbole.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---- Apparence ---- -->
+    <div class="tab-panel" id="tab-apparence" role="tabpanel" aria-labelledby="t-apparence" hidden>
+      <div class="card">
+        <p class="card__label">Modules</p>
+        <div class="field">
+          <label class="field__label" for="module-shape">Forme</label>
+          <select class="field__input" id="module-shape">
+            <option value="square">Carré</option>
+            <option value="rounded">Arrondi</option>
+            <option value="leaf">Feuille</option>
+            <option value="fluid">Fluide (modules soudés)</option>
+            <option value="dot">Point</option>
+            <option value="bars-v">Barres verticales</option>
+            <option value="bars-h">Barres horizontales</option>
+          </select>
+        </div>
+        <div class="grid-2">
+          <div class="field" id="roundness-field">
+            <label class="field__label" for="module-roundness">Arrondi — <span class="value" id="module-roundness-val">40</span> %</label>
+            <input class="range" type="range" id="module-roundness" min="0" max="100" step="5" value="40">
+          </div>
+          <div class="field">
+            <label class="field__label" for="module-scale">Épaisseur — <span class="value" id="module-scale-val">100</span> %</label>
+            <input class="range" type="range" id="module-scale" min="80" max="100" step="2" value="100">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card__label">Couleur des modules</p>
+        <div class="field">
+          <span class="field__label" id="fill-label">Type de remplissage</span>
+          <div class="seg" role="radiogroup" aria-labelledby="fill-label" id="fill-group">
+            <button class="seg__btn is-active" role="radio" type="button" data-value="solid" aria-checked="true">Aplat</button>
+            <button class="seg__btn" role="radio" type="button" data-value="linear" aria-checked="false">Dégradé linéaire</button>
+            <button class="seg__btn" role="radio" type="button" data-value="radial" aria-checked="false">Dégradé radial</button>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label class="field__label" for="fg-color">Couleur</label>
+            <div class="color-field">
+              <input type="color" id="fg-color" value="#111111" aria-label="Sélecteur de couleur des modules">
+              <input class="field__input color-field__hex" type="text" id="fg-hex" value="#111111" spellcheck="false" aria-label="Code hexadécimal des modules">
+            </div>
+          </div>
+          <div class="field" id="fg2-field" hidden>
+            <label class="field__label" for="fg-color2">Seconde couleur</label>
+            <div class="color-field">
+              <input type="color" id="fg-color2" value="#4B5563" aria-label="Sélecteur de seconde couleur">
+              <input class="field__input color-field__hex" type="text" id="fg-hex2" value="#4B5563" spellcheck="false" aria-label="Code hexadécimal de la seconde couleur">
+            </div>
+          </div>
+        </div>
+        <div class="field" id="angle-field" hidden>
+          <label class="field__label" for="grad-angle">Angle du dégradé — <span class="value" id="grad-angle-val">45</span>°</label>
+          <input class="range" type="range" id="grad-angle" min="0" max="360" step="15" value="45">
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card__label">Fond</p>
+        <div class="grid-2">
+          <div class="field">
+            <label class="field__label" for="bg-color">Couleur</label>
+            <div class="color-field">
+              <input type="color" id="bg-color" value="#FFFFFF" aria-label="Sélecteur de couleur de fond">
+              <input class="field__input color-field__hex" type="text" id="bg-hex" value="#FFFFFF" spellcheck="false" aria-label="Code hexadécimal du fond">
+            </div>
+          </div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="bg-transparent">
+          <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+          <span class="switch__text">
+            Fond transparent
+            <small>Le SVG et le PNG sont exportés sans aplat de fond. À réserver aux supports clairs.</small>
+          </span>
+        </label>
+      </div>
+
+      <div class="card">
+        <p class="card__label">Repères de position</p>
+        <div class="grid-2">
+          <div class="field">
+            <label class="field__label" for="eye-frame-shape">Forme du cadre</label>
+            <select class="field__input" id="eye-frame-shape">
+              <option value="square">Carré</option>
+              <option value="rounded">Arrondi</option>
+              <option value="leaf">Feuille</option>
+              <option value="drop">Goutte</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="eye-frame-roundness">Arrondi du cadre — <span class="value" id="eye-frame-roundness-val">35</span> %</label>
+            <input class="range" type="range" id="eye-frame-roundness" min="0" max="100" step="5" value="35">
+          </div>
+          <div class="field">
+            <label class="field__label" for="eye-pupil-shape">Forme de la pupille</label>
+            <select class="field__input" id="eye-pupil-shape">
+              <option value="square">Carré</option>
+              <option value="rounded">Arrondi</option>
+              <option value="leaf">Feuille</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="eye-pupil-roundness">Arrondi de la pupille — <span class="value" id="eye-pupil-roundness-val">40</span> %</label>
+            <input class="range" type="range" id="eye-pupil-roundness" min="0" max="100" step="5" value="40">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label class="field__label" for="eye-frame-color">Couleur du cadre</label>
+            <div class="color-field">
+              <input type="color" id="eye-frame-color" value="#111111" aria-label="Sélecteur de couleur du cadre des repères">
+              <label class="inherit"><input type="checkbox" id="eye-frame-inherit" checked> Hériter</label>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field__label" for="eye-pupil-color">Couleur de la pupille</label>
+            <div class="color-field">
+              <input type="color" id="eye-pupil-color" value="#111111" aria-label="Sélecteur de couleur de la pupille">
+              <label class="inherit"><input type="checkbox" id="eye-pupil-inherit" checked> Hériter</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---- Logo ---- -->
+    <div class="tab-panel" id="tab-logo" role="tabpanel" aria-labelledby="t-logo" hidden>
+      <div class="card">
+        <p class="card__label">Fichier</p>
+        <div class="dropzone" id="dropzone">
+          <input type="file" id="logo-input" accept="image/png,image/jpeg,image/svg+xml,image/webp" hidden>
+          <svg class="icon icon--24" aria-hidden="true"><use href="#i-upload"/></svg>
+          <p class="dropzone__title">Déposer un logo ou <button class="linklike" type="button" id="logo-browse">parcourir</button></p>
+          <p class="dropzone__hint">SVG, PNG, JPG ou WebP. Un SVG reste vectoriel jusque dans l'export.</p>
+        </div>
+        <div class="logo-preview" id="logo-preview" hidden>
+          <div class="logo-preview__thumb"><img id="logo-thumb" alt="Aperçu du logo importé"></div>
+          <div class="logo-preview__meta">
+            <p class="logo-preview__name" id="logo-name">—</p>
+            <p class="logo-preview__size" id="logo-size">—</p>
+          </div>
+          <button class="btn btn--ghost btn--icon" type="button" id="logo-remove" aria-label="Retirer le logo">
+            <svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="card" id="logo-settings" hidden>
+        <p class="card__label">Intégration</p>
+        <div class="field">
+          <label class="field__label" for="logo-size-pct">Taille — <span class="value" id="logo-size-val">20</span> % de la largeur</label>
+          <input class="range" type="range" id="logo-size-pct" min="8" max="35" step="1" value="20">
+        </div>
+        <div class="field">
+          <label class="field__label" for="logo-padding">Marge de sécurité — <span class="value" id="logo-padding-val">0,6</span> module</label>
+          <input class="range" type="range" id="logo-padding" min="0" max="30" step="1" value="6">
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label class="field__label" for="logo-backing">Pastille de fond</label>
+            <select class="field__input" id="logo-backing">
+              <option value="none">Aucune</option>
+              <option value="square" selected>Carrée</option>
+              <option value="circle">Ronde</option>
+            </select>
+          </div>
+          <div class="field" id="logo-backing-round-field">
+            <label class="field__label" for="logo-backing-roundness">Arrondi de la pastille — <span class="value" id="logo-backing-roundness-val">25</span> %</label>
+            <input class="range" type="range" id="logo-backing-roundness" min="0" max="100" step="5" value="25">
+          </div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="logo-knockout" checked>
+          <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+          <span class="switch__text">
+            Effacer les modules sous le logo
+            <small>Retire les modules recouverts au lieu de les laisser dépasser. Le contrôle de lisibilité mesure le coût.</small>
+          </span>
+        </label>
+      </div>
+    </div>
+
+    <!-- ---- Export ---- -->
+    <div class="tab-panel" id="tab-export" role="tabpanel" aria-labelledby="t-export" hidden>
+      <div class="card">
+        <p class="card__label">Dimensions</p>
+        <div class="field">
+          <span class="field__label" id="unit-label">Unité de référence</span>
+          <div class="seg" role="radiogroup" aria-labelledby="unit-label" id="unit-group">
+            <button class="seg__btn is-active" role="radio" type="button" data-value="mm" aria-checked="true">Millimètres + DPI</button>
+            <button class="seg__btn" role="radio" type="button" data-value="px" aria-checked="false">Pixels</button>
+          </div>
+        </div>
+        <div class="grid-2" id="mm-fields">
+          <div class="field">
+            <label class="field__label" for="width-mm">Largeur imprimée (mm)</label>
+            <input class="field__input" type="number" id="width-mm" min="5" max="1000" step="1" value="40">
+          </div>
+          <div class="field">
+            <label class="field__label" for="dpi">Résolution PNG (DPI)</label>
+            <select class="field__input" id="dpi">
+              <option value="72">72 — écran</option>
+              <option value="150">150 — épreuve</option>
+              <option value="300" selected>300 — impression</option>
+              <option value="600">600 — haute définition</option>
+            </select>
+          </div>
+        </div>
+        <div class="field" id="px-field" hidden>
+          <label class="field__label" for="width-px">Largeur PNG (pixels)</label>
+          <input class="field__input" type="number" id="width-px" min="64" max="8192" step="16" value="1024">
+        </div>
+        <p class="field__hint" id="dimension-hint">—</p>
+      </div>
+
+      <div class="card">
+        <p class="card__label">Fichiers</p>
+        <div class="field">
+          <label class="field__label" for="filename">Nom de fichier</label>
+          <input class="field__input" type="text" id="filename" value="qrcode" spellcheck="false">
+        </div>
+        <div class="export-actions">
+          <button class="btn btn--primary" type="button" id="dl-svg-2">
+            <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg> Télécharger le SVG
+          </button>
+          <button class="btn btn--secondary" type="button" id="dl-png-2">
+            <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg> Télécharger le PNG
+          </button>
+          <button class="btn btn--secondary" type="button" id="copy-svg">
+            <svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg> Copier le code SVG
+          </button>
+        </div>
+        <p class="field__hint">Le SVG contient trois chemins compound — modules, cadres, pupilles — donc trois objets vectoriels à l'ouverture dans Illustrator, et non plusieurs centaines de rectangles.</p>
+      </div>
+
+      <div class="card">
+        <p class="card__label">Réinitialisation</p>
+        <button class="btn btn--secondary" type="button" id="reset-all">
+          <svg class="icon" aria-hidden="true"><use href="#i-reset"/></svg> Rétablir les réglages par défaut
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Colonne d'aperçu ============ -->
+  <aside class="preview" aria-label="Aperçu et diagnostic">
+    <div class="preview__sticky">
+      <div class="card preview__card">
+        <div class="preview__stage" id="stage" role="img" aria-label="Aperçu du QR Code généré"></div>
+      </div>
+
+      <div class="preview__actions">
+        <button class="btn btn--primary" type="button" id="dl-svg">
+          <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg> SVG
+        </button>
+        <button class="btn btn--secondary" type="button" id="dl-png">
+          <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg> PNG
+        </button>
+      </div>
+
+      <div class="card">
+        <p class="card__label">Caractéristiques</p>
+        <dl class="readout" id="readout"></dl>
+        <div class="meter">
+          <div class="meter__bar"><span class="meter__fill" id="fill-bar" style="width:0%"></span></div>
+          <p class="meter__text"><span id="fill-text">—</span></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card__label">Contrôle de lisibilité</p>
+        <ul class="checks" id="checks"></ul>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<footer class="foot">
+  <p>Tout est calculé dans le navigateur : aucun contenu n'est transmis à un serveur. Encodeur conforme ISO/IEC 18004, versions 1 à 40.</p>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden>
+  <svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>
+  <span id="toast-text"></span>
+</div>
+
+<script src="assets/js/qr.js"></script>
+<script src="assets/js/render.js"></script>
+<script src="assets/js/export.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
