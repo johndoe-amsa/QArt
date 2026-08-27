@@ -39,11 +39,14 @@
     eyePupilColor: '#111111',
     eyePupilInherit: true,
 
-    logo: null, // { src, name, bytes, vector }
+    logo: null, // { src, name, bytes, vector, aspect }
     logoSizePct: 20,
     logoPadding: 6, // dixièmes de module
-    logoBacking: 'square',
+    logoBacking: 'fit',
     logoBackingRoundness: 25,
+    logoBackingColor: '#FFFFFF',
+    logoBackingInherit: true,
+    logoBackingTransparent: false,
     logoKnockout: true,
 
     unit: 'mm',
@@ -71,6 +74,7 @@
     'logo-size', 'logo-remove', 'logo-settings', 'logo-size-pct', 'logo-size-val',
     'logo-padding', 'logo-padding-val', 'logo-backing', 'logo-backing-round-field',
     'logo-backing-roundness', 'logo-backing-roundness-val', 'logo-knockout',
+    'logo-backing-color', 'logo-backing-hex', 'logo-backing-inherit', 'logo-backing-transparent',
     'unit-group', 'mm-fields', 'width-mm', 'dpi', 'px-field', 'width-px', 'dimension-hint',
     'filename', 'dl-svg', 'dl-png', 'dl-svg-2', 'dl-png-2', 'copy-svg', 'reset-all',
     'stage', 'readout', 'fill-bar', 'fill-text', 'checks', 'theme-toggle', 'toast', 'toast-text'
@@ -122,17 +126,25 @@
 
   // --- Construction du style de rendu -------------------------------------
 
+  // Couleur effective de la pastille : héritée du fond du symbole ou choisie.
+  function backingColor() {
+    if (!state.logoBackingInherit) return state.logoBackingColor;
+    return state.bgTransparent ? '#FFFFFF' : state.bgColor;
+  }
+
   function buildStyle(overrides) {
     var logo = null;
     if (state.logo) {
       logo = {
         src: state.logo.src,
         vector: state.logo.vector,
+        aspect: state.logo.aspect,
         sizePct: state.logoSizePct / 100,
         padding: state.logoPadding / 10,
         backing: state.logoBacking,
         backingRoundness: state.logoBackingRoundness / 100,
-        backingColor: state.bgTransparent ? '#FFFFFF' : state.bgColor,
+        backingColor: backingColor(),
+        backingTransparent: state.logoBackingTransparent,
         knockout: state.logoKnockout
       };
     }
@@ -180,30 +192,60 @@
    * rendue puis relue par un décodeur sur les versions 1 à 20. Les taux cités
    * proviennent de ces mesures, documentées dans le README.
    */
+  /*
+   * Encres réellement présentes dans le symbole. Les repères de position n'y
+   * figurent que lorsqu'ils ne suivent pas la couleur des modules — sans quoi
+   * une couleur de repère mal choisie passerait sous le radar.
+   */
+  function symbolInks() {
+    var inks = [{ label: 'les modules', rgb: hexToRgb(state.fgColor) || [0, 0, 0], critical: false }];
+    if (state.fgType !== 'solid') {
+      inks.push({ label: 'la seconde couleur du dégradé', rgb: hexToRgb(state.fgColor2) || [0, 0, 0], critical: false });
+    }
+    if (!state.eyeFrameInherit) {
+      inks.push({ label: 'le cadre des repères', rgb: hexToRgb(state.eyeFrameColor) || [0, 0, 0], critical: true });
+    }
+    if (!state.eyePupilInherit) {
+      inks.push({ label: 'la pupille des repères', rgb: hexToRgb(state.eyePupilColor) || [0, 0, 0], critical: true });
+    }
+    return inks;
+  }
+
+  var FINDER_NOTE = ' Les repères de position amorcent la détection : s\u2019ils se fondent dans le fond, le symbole n\u2019est pas trouvé du tout.';
+
   function buildChecks(qr, rendered) {
     var checks = [];
-    var fg = hexToRgb(state.fgColor) || [0, 0, 0];
-    var fg2 = hexToRgb(state.fgColor2) || fg;
     var bg = state.bgTransparent ? [255, 255, 255] : (hexToRgb(state.bgColor) || [255, 255, 255]);
-
-    // 1. Contraste entre les modules et le fond.
-    var ratio = contrastRatio(fg, bg);
-    if (state.fgType !== 'solid') ratio = Math.min(ratio, contrastRatio(fg2, bg));
+    var inks = symbolInks();
     var note = state.bgTransparent ? ' Fond transparent : mesure faite sur blanc.' : '';
+
+    // 1. Contraste : on retient l'encre la moins contrastée, repères compris.
+    var worst = inks[0];
+    inks.forEach(function (ink) {
+      if (contrastRatio(ink.rgb, bg) < contrastRatio(worst.rgb, bg)) worst = ink;
+    });
+    var ratio = contrastRatio(worst.rgb, bg);
+    var subject = inks.length > 1 ? ' Élément le moins contrasté : ' + worst.label + '.' : '';
+    var finderNote = worst.critical ? FINDER_NOTE : '';
     if (ratio < 3) {
       checks.push(['error', 'Contraste insuffisant',
-        'Rapport ' + fmt(ratio) + ':1. En dessous de 3:1, la plupart des lecteurs échouent.' + note]);
+        'Rapport ' + fmt(ratio) + ':1. En dessous de 3:1, la plupart des lecteurs échouent.' +
+        subject + note + finderNote]);
     } else if (ratio < 5) {
       checks.push(['warn', 'Contraste limite',
-        'Rapport ' + fmt(ratio) + ':1. Viser 7:1 pour une lecture fiable en conditions dégradées.' + note]);
+        'Rapport ' + fmt(ratio) + ':1. Viser 7:1 pour une lecture fiable en conditions dégradées.' +
+        subject + note + finderNote]);
     } else {
-      checks.push(['ok', 'Contraste suffisant', 'Rapport ' + fmt(ratio) + ':1.' + note]);
+      checks.push(['ok', 'Contraste suffisant', 'Rapport ' + fmt(ratio) + ':1.' + subject + note]);
     }
 
-    // 2. Sens du contraste : un symbole inversé sort du cas nominal.
-    if (luminance(fg) > luminance(bg)) {
-      checks.push(['error', 'Modules plus clairs que le fond',
-        'Un QR Code inversé n\u2019est pas reconnu par une partie des lecteurs mobiles.']);
+    // 2. Sens du contraste : toute encre plus claire que le fond disparaît.
+    var lighter = inks.filter(function (ink) { return luminance(ink.rgb) > luminance(bg); });
+    if (lighter.length) {
+      var names = lighter.map(function (ink) { return ink.label; }).join(' et ');
+      checks.push(['error', 'Encre plus claire que le fond',
+        'Un symbole inversé n\u2019est pas reconnu par une partie des lecteurs mobiles. En cause : ' +
+        names + '.' + (lighter.some(function (i) { return i.critical; }) ? FINDER_NOTE : '')]);
     }
 
     // 3. Zone de silence.
@@ -213,11 +255,15 @@
         ' au lieu des 4 exigés par la norme ISO/IEC 18004.']);
     }
 
-    // 4. Budget de correction consommé par le logo.
-    if (state.logo && state.logoKnockout && rendered.clearedModules > 0) {
+    /*
+     * 4. Budget de correction consommé par le logo. Le décompte vaut que les
+     * modules soient effacés du tracé ou seulement recouverts : dans les deux
+     * cas le lecteur ne les voit plus.
+     */
+    if (state.logo && rendered.clearedModules > 0) {
       var occluded = rendered.clearedModules / rendered.darkModules;
       var consumed = occluded / qr.correctionRatio;
-      var detail = fmt(occluded * 100) + ' % des modules sombres effacés, pour une capacité de correction de ' +
+      var detail = fmt(occluded * 100) + ' % des modules sombres neutralisés, pour une capacité de correction de ' +
         Math.round(qr.correctionRatio * 100) + ' % (niveau ' + qr.ecl + ').';
       if (consumed > 1) {
         checks.push(['error', 'Logo trop grand pour ce niveau',
@@ -392,6 +438,7 @@
     renderReadout(qr, rendered);
     renderChecks(buildChecks(qr, rendered));
     updateDimensionHint(rendered);
+    if (state.logo) syncBackingColorDisplay();
   }
 
   function exportPixelWidth() {
@@ -495,7 +542,22 @@
     el['logo-preview'].hidden = !has;
     el['logo-settings'].hidden = !has;
     el.dropzone.hidden = has;
-    el['logo-backing-round-field'].hidden = state.logoBacking !== 'square';
+    // L'arrondi n'a de sens que sur une pastille rectangulaire.
+    el['logo-backing-round-field'].hidden = state.logoBacking === 'circle';
+
+    var transparent = state.logoBackingTransparent;
+    el['logo-backing-inherit'].disabled = transparent;
+    el['logo-backing-color'].disabled = transparent || state.logoBackingInherit;
+    el['logo-backing-hex'].disabled = transparent || state.logoBackingInherit;
+    syncBackingColorDisplay();
+  }
+
+  // Quand la couleur est héritée, les champs reflètent la teinte effective.
+  function syncBackingColorDisplay() {
+    if (!state.logoBackingInherit) return;
+    var effective = backingColor();
+    el['logo-backing-color'].value = effective;
+    el['logo-backing-hex'].value = effective;
   }
 
   function syncUnitControls() {
@@ -516,7 +578,7 @@
     var isSvg = file.type === 'image/svg+xml' || /\.svg$/i.test(file.name);
     var reader = new FileReader();
     reader.onload = function () {
-      var payload = { name: file.name, bytes: file.size, vector: null, src: '' };
+      var payload = { name: file.name, bytes: file.size, vector: null, src: '', aspect: 1 };
       if (isSvg) {
         var parsed = parseSvgLogo(String(reader.result));
         if (!parsed) {
@@ -524,22 +586,45 @@
           return;
         }
         payload.vector = parsed;
+        payload.aspect = parsed.viewBox.w / parsed.viewBox.h;
         payload.src = 'data:image/svg+xml;base64,' +
           btoa(unescape(encodeURIComponent(String(reader.result))));
+        applyLogo(payload, true);
       } else {
         payload.src = String(reader.result);
+        // Les proportions d'une image matricielle ne sont connues qu'une fois
+        // décodée : le logo n'est appliqué qu'à ce moment-là.
+        var probe = new Image();
+        probe.onload = function () {
+          payload.aspect = probe.naturalWidth && probe.naturalHeight
+            ? probe.naturalWidth / probe.naturalHeight
+            : 1;
+          applyLogo(payload, false);
+        };
+        probe.onerror = function () { toast('Ce fichier image n\u2019a pas pu être décodé.'); };
+        probe.src = payload.src;
       }
-      state.logo = payload;
-      el['logo-thumb'].src = payload.src;
-      el['logo-name'].textContent = payload.name;
-      el['logo-size'].textContent = bytesLabel(payload.bytes) +
-        (isSvg ? ' · vectoriel conservé' : ' · image matricielle');
-      syncLogoControls();
-      update();
     };
     reader.onerror = function () { toast('Lecture du fichier impossible.'); };
     if (isSvg) reader.readAsText(file);
     else reader.readAsDataURL(file);
+  }
+
+  function describeAspect(aspect) {
+    if (!(aspect > 0)) return 'proportions inconnues';
+    if (Math.abs(aspect - 1) < 0.02) return 'carré';
+    return aspect > 1 ? 'paysage ' + fmt(aspect, 2) + ':1' : 'portrait 1:' + fmt(1 / aspect, 2);
+  }
+
+  function applyLogo(payload, isSvg) {
+    state.logo = payload;
+    el['logo-thumb'].src = payload.src;
+    el['logo-name'].textContent = payload.name;
+    el['logo-size'].textContent = bytesLabel(payload.bytes) +
+      (isSvg ? ' · vectoriel conservé' : ' · image matricielle') +
+      ' · ' + describeAspect(payload.aspect);
+    syncLogoControls();
+    update();
   }
 
   /*
@@ -705,6 +790,10 @@
     el['logo-backing'].value = state.logoBacking;
     el['logo-backing-roundness'].value = state.logoBackingRoundness;
     el['logo-backing-roundness-val'].textContent = state.logoBackingRoundness;
+    el['logo-backing-color'].value = state.logoBackingColor;
+    el['logo-backing-hex'].value = state.logoBackingColor;
+    el['logo-backing-inherit'].checked = state.logoBackingInherit;
+    el['logo-backing-transparent'].checked = state.logoBackingTransparent;
     el['logo-knockout'].checked = state.logoKnockout;
 
     el['width-mm'].value = state.widthMm;
@@ -820,6 +909,17 @@
     });
     el['logo-knockout'].addEventListener('change', function () {
       state.logoKnockout = el['logo-knockout'].checked;
+      scheduleUpdate();
+    });
+    bindColor(el['logo-backing-color'], el['logo-backing-hex'], 'logoBackingColor');
+    el['logo-backing-inherit'].addEventListener('change', function () {
+      state.logoBackingInherit = el['logo-backing-inherit'].checked;
+      syncLogoControls();
+      scheduleUpdate();
+    });
+    el['logo-backing-transparent'].addEventListener('change', function () {
+      state.logoBackingTransparent = el['logo-backing-transparent'].checked;
+      syncLogoControls();
       scheduleUpdate();
     });
 

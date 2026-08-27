@@ -4,7 +4,7 @@
   "description": "Générateur de QR Code vectoriel entièrement local, personnalisable, exportable en SVG et PNG.",
   "private": true,
   "scripts": {
-    "test": "node tests/encoder.test.js",
+    "test": "node tests/encoder.test.js && node tests/render.test.js",
     "test:lisibilite": "node tests/readability.test.js"
   },
   "devDependencies": {

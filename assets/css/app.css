@@ -128,6 +128,13 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/*
+ * L'attribut `hidden` doit primer sur le `display` posé par les classes de
+ * composant : la règle du navigateur, portée par un sélecteur d'élément, perd
+ * sinon face à `.field { display: flex }` et le masquage reste sans effet.
+ */
+[hidden] { display: none !important; }
+
 html { -webkit-text-size-adjust: 100%; }
 
 body {
@@ -312,7 +319,6 @@ p { margin: 0; }
 }
 
 .tab-panel { display: flex; flex-direction: column; gap: var(--space-4); }
-.tab-panel[hidden] { display: none; }
 
 /* ---------- Boutons ---------- */
 
@@ -408,7 +414,6 @@ select.field__input {
   line-height: 1.45;
 }
 .field__error { font-size: 12px; color: var(--color-error); }
-.field__error[hidden] { display: none; }
 
 .value {
   font-family: var(--font-mono);
@@ -626,7 +631,6 @@ select.field__input {
   border-radius: var(--radius-lg);
   background: var(--color-bg);
 }
-.logo-preview[hidden] { display: none; }
 .logo-preview__thumb {
   width: 44px;
   height: 44px;
@@ -752,7 +756,6 @@ select.field__input {
   font-size: 14px;
   animation: enter var(--duration-slow) var(--ease-out);
 }
-.toast[hidden] { display: none; }
 .toast .icon { color: var(--color-success); }
 
 @keyframes enter {

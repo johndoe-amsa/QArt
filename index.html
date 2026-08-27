@@ -270,6 +270,7 @@
         <div class="field">
           <label class="field__label" for="logo-size-pct">Taille — <span class="value" id="logo-size-val">20</span> % de la largeur</label>
           <input class="range" type="range" id="logo-size-pct" min="8" max="35" step="1" value="20">
+          <p class="field__hint">Appliqué au plus grand côté : les proportions du fichier importé sont conservées.</p>
         </div>
         <div class="field">
           <label class="field__label" for="logo-padding">Marge de sécurité — <span class="value" id="logo-padding-val">0,6</span> module</label>
@@ -277,10 +278,10 @@
         </div>
         <div class="grid-2">
           <div class="field">
-            <label class="field__label" for="logo-backing">Pastille de fond</label>
+            <label class="field__label" for="logo-backing">Forme de la pastille</label>
             <select class="field__input" id="logo-backing">
-              <option value="none">Aucune</option>
-              <option value="square" selected>Carrée</option>
+              <option value="fit" selected>Ajustée au logo</option>
+              <option value="square">Carrée</option>
               <option value="circle">Ronde</option>
             </select>
           </div>
@@ -289,6 +290,22 @@
             <input class="range" type="range" id="logo-backing-roundness" min="0" max="100" step="5" value="25">
           </div>
         </div>
+        <div class="field">
+          <label class="field__label" for="logo-backing-color">Couleur de la pastille</label>
+          <div class="color-field">
+            <input type="color" id="logo-backing-color" value="#FFFFFF" aria-label="Sélecteur de couleur de la pastille">
+            <input class="field__input color-field__hex" type="text" id="logo-backing-hex" value="#FFFFFF" spellcheck="false" aria-label="Code hexadécimal de la pastille">
+            <label class="inherit"><input type="checkbox" id="logo-backing-inherit" checked> Hériter du fond</label>
+          </div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="logo-backing-transparent">
+          <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+          <span class="switch__text">
+            Pastille transparente
+            <small>Le logo se pose directement sur les modules. La forme choisie continue de définir la zone effacée.</small>
+          </span>
+        </label>
         <label class="switch">
           <input type="checkbox" id="logo-knockout" checked>
           <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
