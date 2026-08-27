@@ -202,44 +202,96 @@
 
   // --- Logo ---------------------------------------------------------------
 
-  // Zone (en modules) recouverte par le logo, marge comprise.
-  function logoBox(size, logo) {
-    var span = size * logo.sizePct;
-    var pad = logo.padding * 2;
-    var total = span + pad;
-    var start = (size - total) / 2;
-    return { start: start, end: start + total, span: span, total: total };
+  /*
+   * Géométrie du logo, exprimée en modules.
+   *
+   * Le logo est inscrit dans un rectangle qui respecte ses proportions
+   * réelles : un logo large n'occupe donc pas un carré, et la zone qu'il
+   * neutralise reste minimale. La pastille reprend ce rectangle en mode
+   * « ajustée », ou le carré circonscrit en mode carré ou rond.
+   */
+  function logoGeometry(size, logo) {
+    var aspect = logo.aspect > 0 ? logo.aspect : 1; // largeur / hauteur
+    var longest = size * logo.sizePct;
+    var lw = aspect >= 1 ? longest : longest * aspect;
+    var lh = aspect >= 1 ? longest / aspect : longest;
+    var pad = logo.padding;
+    var shape = logo.backing || 'fit';
+
+    var bw, bh;
+    if (shape === 'square' || shape === 'circle') {
+      bw = bh = Math.max(lw, lh) + pad * 2;
+    } else {
+      bw = lw + pad * 2;
+      bh = lh + pad * 2;
+    }
+
+    return {
+      shape: shape,
+      logoX: (size - lw) / 2, logoY: (size - lh) / 2, logoW: lw, logoH: lh,
+      x: (size - bw) / 2, y: (size - bh) / 2, w: bw, h: bh
+    };
   }
 
-  function logoMarkup(size, quiet, logo, bgColor) {
+  /*
+   * Prédicat d'occultation : un module est neutralisé dès que son centre
+   * tombe dans la pastille. Le disque est testé comme un disque, et non par
+   * son carré englobant, ce qui épargne les modules des quatre coins.
+   */
+  function logoCovers(geo) {
+    if (geo.shape === 'circle') {
+      var r = Math.min(geo.w, geo.h) / 2;
+      var cx = geo.x + geo.w / 2;
+      var cy = geo.y + geo.h / 2;
+      return function (x, y) {
+        var dx = x + 0.5 - cx;
+        var dy = y + 0.5 - cy;
+        return dx * dx + dy * dy <= r * r;
+      };
+    }
+    return function (x, y) {
+      return x + 0.5 > geo.x && x + 0.5 < geo.x + geo.w &&
+        y + 0.5 > geo.y && y + 0.5 < geo.y + geo.h;
+    };
+  }
+
+  function backingPath(geo, quiet, roundness) {
+    var px = (quiet + geo.x) * U;
+    var py = (quiet + geo.y) * U;
+    var pw = geo.w * U;
+    var ph = geo.h * U;
+    if (geo.shape === 'circle') {
+      return pathCircle(px + pw / 2, py + ph / 2, Math.min(pw, ph) / 2);
+    }
+    return pathRoundRect(px, py, pw, ph, (Math.min(pw, ph) / 2) * roundness);
+  }
+
+  function logoMarkup(size, quiet, logo, geo) {
     if (!logo || !logo.src) return '';
-    var box = logoBox(size, logo);
-    var px = (quiet + box.start) * U;
-    var total = box.total * U;
-    var imgSize = box.span * U;
-    var imgPos = px + (total - imgSize) / 2;
     var out = '';
 
-    if (logo.backing !== 'none') {
-      var backFill = esc(logo.backingColor || bgColor || '#FFFFFF');
-      out += '<path d="' + (logo.backing === 'circle'
-        ? pathCircle(px + total / 2, px + total / 2, total / 2)
-        : pathRoundRect(px, px, total, total, (total / 2) * logo.backingRoundness)) +
-        '" fill="' + backFill + '"/>';
+    if (!logo.backingTransparent) {
+      out += '<path id="qart-logo-backing" d="' + backingPath(geo, quiet, logo.backingRoundness) +
+        '" fill="' + esc(logo.backingColor || '#FFFFFF') + '"/>';
     }
+
+    var ix = (quiet + geo.logoX) * U;
+    var iy = (quiet + geo.logoY) * U;
+    var iw = geo.logoW * U;
+    var ih = geo.logoH * U;
 
     if (logo.vector) {
       // Logo SVG : on conserve le vectoriel en transposant le viewBox.
       var vb = logo.vector.viewBox;
-      var k = imgSize / Math.max(vb.w, vb.h);
-      var tx = imgPos + (imgSize - vb.w * k) / 2 - vb.x * k;
-      var ty = imgPos + (imgSize - vb.h * k) / 2 - vb.y * k;
+      var k = Math.min(iw / vb.w, ih / vb.h);
+      var tx = ix + (iw - vb.w * k) / 2 - vb.x * k;
+      var ty = iy + (ih - vb.h * k) / 2 - vb.y * k;
       out += '<g transform="translate(' + n(tx) + ' ' + n(ty) + ') scale(' + n(k) + ')">' +
         logo.vector.content + '</g>';
     } else {
       out += '<image href="' + esc(logo.src) + '" xlink:href="' + esc(logo.src) +
-        '" x="' + n(imgPos) + '" y="' + n(imgPos) + '" width="' + n(imgSize) +
-        '" height="' + n(imgSize) + '" preserveAspectRatio="xMidYMid meet"/>';
+        '" x="' + n(ix) + '" y="' + n(iy) + '" width="' + n(iw) +
+        '" height="' + n(ih) + '" preserveAspectRatio="xMidYMid meet"/>';
     }
     return out;
   }
@@ -282,16 +334,18 @@
     var codeOrigin = quiet * U;
     var codeSide = size * U;
 
-    // Détourage des modules sous le logo.
-    var underLogo = function () { return false; };
-    if (style.logo && style.logo.src && style.logo.knockout) {
-      var box = logoBox(size, style.logo);
-      underLogo = function (x, y) {
-        return x + 0.5 > box.start && x + 0.5 < box.end &&
-          y + 0.5 > box.start && y + 0.5 < box.end;
-      };
-    }
-    var keep = function (x, y) { return !underLogo(x, y); };
+    /*
+     * Occultation par le logo. Elle est comptée dès qu'un logo est présent,
+     * que les modules soient retirés du chemin ou simplement recouverts :
+     * dans les deux cas le lecteur ne les voit plus, et le budget de
+     * correction est consommé de la même façon.
+     */
+    var hasLogo = !!(style.logo && style.logo.src);
+    var geo = hasLogo ? logoGeometry(size, style.logo) : null;
+    var underLogo = hasLogo ? logoCovers(geo) : function () { return false; };
+    var keep = hasLogo && style.logo.knockout
+      ? function (x, y) { return !underLogo(x, y); }
+      : function () { return true; };
 
     // Comptage indépendant du rendu : `keep` est aussi interrogé pour les
     // voisins (forme fluide), il ne peut donc pas servir de compteur.
@@ -336,7 +390,7 @@
     body += '<path id="qart-eye-frames" d="' + dFrames + '" fill="' + framePaint + '" fill-rule="evenodd"/>';
     body += '<path id="qart-eye-pupils" d="' + dPupils + '" fill="' + pupilPaint + '"/>';
     body += '</g>';
-    body += logoMarkup(size, quiet, style.logo, style.bgTransparent ? null : style.bgColor);
+    if (hasLogo) body += logoMarkup(size, quiet, style.logo, geo);
 
     // Dimensions physiques pour la chaîne print, ou pixels pour la rasterisation.
     var sizeAttr = style.widthPx

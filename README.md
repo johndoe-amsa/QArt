@@ -37,18 +37,22 @@ donc un symbole plus compact qu'un encodage en octets d'un bout à l'autre.
   ou transparent.
 - **Repères de position** : forme et arrondi du cadre et de la pupille réglables
   séparément, couleurs propres ou héritées des modules.
-- **Logo** : import SVG, PNG, JPG ou WebP. Taille, marge de sécurité, pastille de
-  fond et effacement des modules recouverts. **Un logo SVG reste vectoriel
-  jusque dans l'export** : son contenu est réinjecté dans le fichier de sortie,
-  pas converti en image.
+- **Logo** : import SVG, PNG, JPG ou WebP. **Un logo SVG reste vectoriel jusque
+  dans l'export** : son contenu est réinjecté dans le fichier de sortie, pas
+  converti en image. Les proportions du fichier sont conservées — la taille
+  s'applique au plus grand côté.
+- **Pastille du logo** : forme *ajustée au logo*, carrée ou ronde, avec arrondi,
+  couleur propre ou héritée du fond, et option transparente. La forme choisie
+  définit la zone neutralisée même lorsque la pastille est invisible, ce qui
+  permet de dégager les modules sans poser d'aplat.
 
 ### Export
 
 - **SVG** : dimensions en millimètres, prêt à placer. Le fichier contient trois
-  chemins compound — modules, cadres des repères, pupilles — plus un quatrième
-  pour le fond lorsqu'il est opaque. Soit trois ou quatre objets vectoriels à
-  l'ouverture dans Illustrator, et non plusieurs centaines de rectangles à
-  fusionner à la main.
+  chemins compound — modules, cadres des repères, pupilles — plus un pour le
+  fond lorsqu'il est opaque et un pour la pastille du logo. Soit trois à cinq
+  objets vectoriels à l'ouverture dans Illustrator, et non plusieurs centaines
+  de rectangles à fusionner à la main.
 - **PNG** : taille définie en millimètres et DPI (72 à 600) ou directement en
   pixels. Fond transparent possible.
 - **Copie du code SVG** dans le presse-papier, collable directement dans un plan
@@ -60,6 +64,19 @@ Un panneau permanent évalue les réglages en cours et signale ce qui met la
 lecture en péril : contraste insuffisant ou inversé, zone de silence réduite,
 budget de correction consommé par le logo, formes à risque, module trop petit
 pour l'impression retenue. Les seuils ne sont pas arbitraires — voir plus bas.
+
+Le contrôle de contraste porte sur toutes les encres réellement présentes, y
+compris la couleur des repères de position lorsqu'elle ne suit pas celle des
+modules. Un cadre de repère passé en blanc sur fond blanc est signalé comme
+erreur, avec la mention que les repères amorcent la détection : s'ils
+disparaissent, le symbole n'est pas trouvé du tout.
+
+Le budget de correction est décompté dès qu'un logo recouvre des modules, que
+ceux-ci soient effacés du tracé ou simplement masqués — dans les deux cas le
+lecteur ne les voit plus. La forme de pastille pèse lourd sur ce budget : pour
+un logo au format 3:1 occupant 20 % de la largeur, la pastille ajustée
+neutralise 10 modules sur 333 (20 % du budget au niveau M), la ronde 19 (38 %)
+et la carrée 30 (60 %).
 
 ---
 
@@ -110,7 +127,7 @@ valider l'encodeur, qui est écrit de zéro.
 
 ```bash
 npm install          # dépendances de test uniquement
-npm test             # encodeur
+npm test             # encodeur et moteur de rendu
 npm run test:lisibilite   # banc de décodage des formes (nécessite Chromium)
 ```
 
@@ -126,6 +143,7 @@ chromium`, ou pointer un binaire existant via la variable `CHROMIUM_PATH`.
 | C | 508 | Aller-retour encodage puis décodage sur contenus mixtes, tous niveaux. |
 | D | 508 | Optimalité : notre segmentation ne produit jamais un symbole plus grand que celui de la référence. |
 | E | 169 | Capacités des 40 versions aux 4 niveaux, refus explicite au-delà, respect de la version minimale et du masque imposés. |
+| Rendu | 19 | Géométrie du logo et de sa pastille, conservation des proportions, zone neutralisée selon la forme, pastille transparente, zone de silence, dimensions et nombre de chemins compound. |
 
 Les bancs A et B se limitent volontairement aux contenus homogènes : sur du texte
 mixte, notre segmentation optimale et la segmentation des bibliothèques de
